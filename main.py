@@ -5,6 +5,8 @@ from tkinter import filedialog
 from tkinter import messagebox
 import csv
 from datetime import datetime
+import threading
+from time import sleep
 
 
 class Program():
@@ -17,9 +19,14 @@ class Program():
         self.window()
         self.root.mainloop()
 
-    def open_file(self, method):
+    def updater(self, event):
+        self.progressbar_1["value"] = self.value
+        self.label_1["text"] = f"{self.value} %"
+
+    def open_file(self, *args):
+        method = args[1]
         coincidences = []
-        with open(self.path, "r") as f:
+        with open(self.path, "r", encoding="utf8") as f:
             n = 0
             string_n = 0
             with open(self.path, "rb") as f_2:
@@ -54,12 +61,12 @@ class Program():
                 else: n -= 1
 
                 string_n += 1
-                value = 100 / string_count * string_n
-                self.progressbar_1["value"] = round(value, 1)
-                self.label_1["text"] = f"{value} %"
+                value = round(100 / string_count * string_n, 1)
+                self.value = value
+                self.root.event_generate('<<Progress>>')
 
                 n += 1
-
+ 
             self.progressbar_1["value"] = 100
             self.label_1["text"] = "100.0 %"
             self.label_2["text"] = "Пошук тривав %s. Знайдено %s строк." % ((datetime.min + (datetime.now() - time_start)).strftime("%H:%M:%S"), n)
@@ -77,7 +84,7 @@ class Program():
         self.text_1.delete(1.0, END)
 
         extension = os.path.splitext(self.path)[1]
-        self.open_file(extension)
+        threading.Thread(target=self.open_file, args=(self, extension), daemon=True).start()
 
     def get_file(self):
         filetypes = (
@@ -153,5 +160,7 @@ class Program():
         file_menu.add_command(label="Зберегти", accelerator="", command=self.save_file)
         menubar_1.add_cascade(menu=file_menu, label="Файл")
         self.root.config(menu=menubar_1)
+
+        self.root.bind('<<Progress>>', self.updater)
 
 Program()
